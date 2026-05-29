@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Claude Code Pets</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background: transparent;
+      overflow: hidden;
+      user-select: none;
+      -webkit-user-select: none;
+      -webkit-app-region: drag;
+      cursor: grab;
+      width: 100vw;
+      height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    #pet {
+      width: 150px;
+      height: 150px;
+      object-fit: contain;
+      pointer-events: none;
+      transition: opacity 0.3s ease;
+    }
+
+    .state-thinking { animation: pulse 1.2s ease-in-out infinite; }
+    .state-working  { animation: bounce 0.6s ease-in-out infinite; }
+    .state-juggling { animation: swing 0.8s ease-in-out infinite; }
+    .state-error    { animation: shake 0.4s ease-in-out; }
+    .state-done     { animation: pop 0.5s ease-out; }
+    .state-notification { animation: pulse 0.8s ease-in-out infinite; }
+
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.05); }
+    }
+    @keyframes bounce {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-4px); }
+    }
+    @keyframes swing {
+      0%, 100% { transform: rotate(0deg); }
+      25% { transform: rotate(-5deg); }
+      75% { transform: rotate(5deg); }
+    }
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      20% { transform: translateX(-5px); }
+      40% { transform: translateX(5px); }
+      60% { transform: translateX(-5px); }
+      80% { transform: translateX(3px); }
+    }
+    @keyframes pop {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.15); }
+      100% { transform: scale(1); }
+    }
+  </style>
+</head>
+<body>
+  <img id="pet" src="assets/clawd-idle-follow.svg" alt="Clawd" />
+
+  <script>
+    const pet = document.getElementById("pet");
+
+    // State → SVG mapping
+    const STATE_SVG = {
+      idle: "assets/clawd-idle-follow.svg",
+      thinking: "assets/clawd-working-thinking.svg",
+      working: "assets/clawd-working-typing.svg",
+      juggling: "assets/clawd-headphones-groove.svg",
+      error: "assets/clawd-error.svg",
+      done: "assets/clawd-happy.svg",
+      attention: "assets/clawd-happy.svg",
+      notification: "assets/clawd-notification.svg",
+      sleeping: "assets/clawd-sleeping.svg",
+      sweeping: "assets/clawd-working-sweeping.svg",
+      carrying: "assets/clawd-working-carrying.svg",
+    };
+
+    const STATE_CLASS = {
+      thinking: "state-thinking",
+      working: "state-working",
+      juggling: "state-juggling",
+      error: "state-error",
+      done: "state-done",
+      attention: "state-done",
+      notification: "state-notification",
+    };
+
+    // Oneshots: display briefly then fall back to idle
+    const AUTO_RETURN_MS = {
+      done: 4000,
+      attention: 4000,
+      error: 5000,
+      notification: 5000,
+      sweeping: 6000,
+    };
+    let autoReturnTimer = null;
+
+    function setState(state) {
+      const svg = STATE_SVG[state];
+      if (svg && pet.src.indexOf(svg) === -1) {
+        pet.src = svg;
+      }
+      pet.className = STATE_CLASS[state] || "";
+
+      // Auto-return to idle for oneshot states
+      if (autoReturnTimer) { clearTimeout(autoReturnTimer); autoReturnTimer = null; }
+      const delay = AUTO_RETURN_MS[state];
+      if (delay) {
+        autoReturnTimer = setTimeout(() => setState("idle"), delay);
+      }
+    }
+
+    // Connect to SSE stream
+    const es = new EventSource("http://127.0.0.1:3456/events");
+
+    es.onmessage = (e) => {
+      try {
+        const data = JSON.parse(e.data);
+        if (data.state) setState(data.state);
+      } catch {}
+    };
+
+    es.onerror = () => {
+      // Reconnect on error
+      setTimeout(() => { /* EventSource auto-reconnects */ }, 1000);
+    };
+  </script>
+</body>
+</html>

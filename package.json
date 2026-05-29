@@ -1,0 +1,17 @@
+{
+  "name": "claudecode-pets",
+  "version": "1.0.0",
+  "description": "Desktop floating pet that monitors Claude Code conversation progress",
+  "main": "src/main.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "float": "electron src/main.js",
+    "install-hooks": "node src/install.js",
+    "uninstall-hooks": "node src/install.js --uninstall"
+  },
+  "keywords": ["claude-code", "monitor", "desktop-pet"],
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^33.0.0"
+  }
+}
